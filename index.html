@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Detection Web App</title>
+    <style>
+        /* Add your custom styles here */
+    </style>
+</head>
+<body>
+    <h1>Face Detection Web App</h1>
+
+    <!-- Utility buttons -->
+    <button onclick="detectFromImage()">Detect from Image</button>
+    <button onclick="detectFromVideo()">Detect from Video</button>
+    <button onclick="detectFromCamera()">Detect from Camera</button>
+
+    <!-- Input elements -->
+    <input type="file" id="imageInput" accept="image/*">
+    <video id="videoInput" width="640" height="480" style="display:none"></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <!-- Display area for detected faces -->
+    <div id="result"></div>
+
+    <script>
+        async function detectFromImage() {
+            const input = document.getElementById('imageInput');
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('image', file);
+
+            await processImage(formData);
+        }
+
+        async function detectFromVideo() {
+            const video = document.getElementById('videoInput');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+
+            // Start camera stream
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.play();
+
+            // Periodically process video frames
+            const intervalId = setInterval(async () => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = canvas.toDataURL('image/jpeg');
+                const formData = new FormData();
+                formData.append('image', imageData);
+
+                await processImage(formData);
+            }, 1000);
+
+            // Stop video stream after 10 seconds (adjust as needed)
+            setTimeout(() => {
+                clearInterval(intervalId);
+                stream.getTracks().forEach(track => track.stop());
+            }, 10000);
+        }
+
+        async function detectFromCamera() {
+            // Assuming the backend supports real-time camera processing
+            // You may need additional code to handle camera input on the server side
+            console.log("Detecting from camera...");
+
+            // Add your implementation here
+        }
+
+        async function processImage(formData) {
+            try {
+                const response = await fetch('/api/face-detection', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    displayResult(result);
+                } else {
+                    console.error('Error processing image');
+                }
+            } catch (error) {
+                console.error('Error processing image', error);
+            }
+        }
+
+        function displayResult(result) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<p>Detected faces: ${result.faces}</p>`;
+        }
+    </script>
+</body>
+</html>
